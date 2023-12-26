@@ -1,10 +1,13 @@
 package pro.sky.stringlist.services;
 
-import pro.sky.stringlist.exceptions.*;
+import pro.sky.stringlist.exceptions.StringListIndexOutOfBoundsException;
+import pro.sky.stringlist.exceptions.StringListItemNotFoundException;
+import pro.sky.stringlist.exceptions.StringListNullArgumentValueException;
+import pro.sky.stringlist.exceptions.StringListStorageInitializationException;
 import pro.sky.stringlist.interfaces.StringList;
 
 public class ArrayStringList implements StringList {
-    private final int DEFAULT_STORAGE_CAPACITY = 10;
+    private static final int DEFAULT_STORAGE_CAPACITY = 10;
     private String[] storage;
     private int size;
 
@@ -36,9 +39,13 @@ public class ArrayStringList implements StringList {
         checkIndexValidRangeForAddItem(index);
         checkParameterForNull(item);
         rearrangeStorageIfNeeded();
-        System.arraycopy(storage, index, storage, index + 1, size - index);
-        storage[index] = item;
-        size++;
+        if (index < size) {
+            System.arraycopy(storage, index, storage, index + 1, size - index);
+            storage[index] = item;
+            size++;
+        } else {
+            storage[size++] = item;
+        }
         return item;
     }
 
@@ -57,12 +64,7 @@ public class ArrayStringList implements StringList {
         if (indexOfItem == -1) {
             throw new StringListItemNotFoundException("Не найден указанный элемент");
         }
-        size--;
-        if (indexOfItem == 0) {
-            storage[size] = null;
-        } else {
-            System.arraycopy(storage, indexOfItem + 1, storage, indexOfItem, size - indexOfItem);
-        }
+        removeItemByIndexFromStorage(indexOfItem);
         return item;
     }
 
@@ -70,11 +72,7 @@ public class ArrayStringList implements StringList {
     public String remove(int index) {
         checkIndexValidRange(index);
         String item = storage[index];
-        size--;
-        if (index != size) {
-            System.arraycopy(storage, index + 1, storage, index, size - index);
-        }
-        storage[size] = null;
+        removeItemByIndexFromStorage(index);
         return item;
     }
 
@@ -89,7 +87,7 @@ public class ArrayStringList implements StringList {
         checkParameterForNull(item);
         for (int i = 0; i < size; i++) {
             if (storage[i].equals(item)) {
-                return  i;
+                return i;
             }
         }
         return -1;
@@ -100,7 +98,7 @@ public class ArrayStringList implements StringList {
         checkParameterForNull(item);
         for (int i = size - 1; i >= 0; i--) {
             if (storage[i].equals(item)) {
-                return  i;
+                return i;
             }
         }
         return -1;
@@ -114,10 +112,13 @@ public class ArrayStringList implements StringList {
 
     @Override
     public boolean equals(StringList otherList) {
+        if (otherList == null) {
+            throw new StringListNullArgumentValueException("Для сравнения передано null-значение");
+        }
         if (this == otherList) {
             return true;
         }
-        if (otherList == null || size != otherList.size()) {
+        if (size != otherList.size()) {
             return false;
         }
         for (int i = 0; i < size; i++) {
@@ -174,13 +175,25 @@ public class ArrayStringList implements StringList {
 
     private void checkIndexValidRangeForAddItem(int index) {
         if (index < 0 || index > size) {
-            throw new StringListIndexOutOfBoundsException("Индекс " + index + ", размер списка " + size);
+            throw new StringListIndexOutOfBoundsException(getOutOfBoundMessage(index, size));
         }
     }
 
     private void checkIndexValidRange(int index) {
         if (isEmpty() || index < 0 || index > size - 1) {
-            throw new StringListIndexOutOfBoundsException("Индекс " + index + ", размер списка " + size);
+            throw new StringListIndexOutOfBoundsException(getOutOfBoundMessage(index, size));
         }
+    }
+
+    private String getOutOfBoundMessage(int index, int size) {
+        return "Индекс: " + index + ", размер списка " + size;
+    }
+
+    private void removeItemByIndexFromStorage(int index) {
+        size--;
+        if (index != size) {
+            System.arraycopy(storage, index + 1, storage, index, size - index);
+        }
+        storage[size] = null;
     }
 }
